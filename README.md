@@ -99,6 +99,14 @@ gscs remove nmap_scan
 
 # Lancer l'interface graphique
 gscs gui
+
+# Utiliser un template de script
+gscs template list
+gscs template use recon/nmap-quick -o /opt/scripts/nmap_quick.sh --register
+
+# Exporter / importer la bibliothèque
+gscs export -o ma_librairie.json
+gscs import ma_librairie.json --skip-existing
 ```
 
 <br>
@@ -136,6 +144,24 @@ gscs deps check <nom>     Vérifie les dépendances
 gscs deps install <nom>   Affiche les commandes d'installation
 gscs remove <nom>         Supprime un script
 gscs gui                  Lance l'interface graphique
+
+gscs template list        Liste les templates disponibles
+gscs template show <nom>  Prévisualise un template
+gscs template use <nom> -o <fichier>
+                          Génère un script depuis un template
+      --register          Enregistre automatiquement le script généré
+      --force             Écrase si le fichier existe déjà
+
+gscs export               Exporte la bibliothèque en archive JSON
+  -o, --output            Fichier de sortie (défaut : stdout)
+  -c, --category          N'exporter qu'une catégorie
+      --no-content        Métadonnées uniquement (sans le contenu des fichiers)
+
+gscs import <archive>     Importe depuis une archive JSON
+      --skip-existing     Ignore les scripts déjà enregistrés
+      --update            Écrase les scripts existants sans confirmation
+      --no-restore        Ne pas restaurer les fichiers depuis l'archive
+      --dry-run           Prévisualise sans appliquer les changements
 ```
 
 <br>

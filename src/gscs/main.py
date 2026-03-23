@@ -119,6 +119,21 @@ def _cmd_gui(_args: argparse.Namespace) -> int:
     return run()
 
 
+def _cmd_template(args: argparse.Namespace) -> int:
+    from gscs.commands.template import run
+    return run(args)
+
+
+def _cmd_export(args: argparse.Namespace) -> int:
+    from gscs.commands.export_import import run_export
+    return run_export(args)
+
+
+def _cmd_import(args: argparse.Namespace) -> int:
+    from gscs.commands.export_import import run_import
+    return run_import(args)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="gscs",
@@ -223,6 +238,49 @@ examples:
     # ── gui ───────────────────────────────────────────────────────────────────
     p_gui = sub.add_parser("gui", help="Launch the Tkinter GUI")
     p_gui.set_defaults(func=_cmd_gui)
+
+    # ── template ──────────────────────────────────────────────────────────────
+    p_tmpl = sub.add_parser("template", help="List, preview and generate script templates")
+    tmpl_sub = p_tmpl.add_subparsers(dest="template_cmd", metavar="<action>")
+    tmpl_sub.required = True
+
+    p_tmpl_list = tmpl_sub.add_parser("list", help="List all built-in templates")
+    p_tmpl_list.add_argument("keyword", nargs="?", help="Filter by keyword")
+
+    p_tmpl_show = tmpl_sub.add_parser("show", help="Preview a template's content")
+    p_tmpl_show.add_argument("name", help="Template name (e.g. recon/nmap-quick)")
+
+    p_tmpl_use = tmpl_sub.add_parser("use", help="Generate a script file from a template")
+    p_tmpl_use.add_argument("name", help="Template name (e.g. recon/nmap-quick)")
+    p_tmpl_use.add_argument("-o", "--output", required=True, help="Output file path")
+    p_tmpl_use.add_argument("--force", action="store_true", help="Overwrite if file exists")
+    p_tmpl_use.add_argument("--register", action="store_true",
+                            help="Auto-register the generated script in the library")
+
+    p_tmpl.set_defaults(func=_cmd_template)
+
+    # ── export ────────────────────────────────────────────────────────────────
+    p_export = sub.add_parser("export", help="Export the script library to a JSON archive")
+    p_export.add_argument("-o", "--output", help="Output file (default: stdout)")
+    p_export.add_argument("-c", "--category", default=None,
+                          choices=["recon", "exploit", "post-exploit", "forensic", "custom", "all"],
+                          help="Export only this category")
+    p_export.add_argument("--no-content", action="store_true",
+                          help="Do not embed script file contents (metadata only)")
+    p_export.set_defaults(func=_cmd_export)
+
+    # ── import ────────────────────────────────────────────────────────────────
+    p_import = sub.add_parser("import", help="Import scripts from a JSON archive")
+    p_import.add_argument("archive", help="Path to the .json archive file")
+    p_import.add_argument("--skip-existing", action="store_true",
+                          help="Silently skip scripts that already exist")
+    p_import.add_argument("--update", action="store_true",
+                          help="Overwrite all existing scripts without prompting")
+    p_import.add_argument("--no-restore", action="store_true",
+                          help="Do not restore script files from archive content")
+    p_import.add_argument("--dry-run", action="store_true",
+                          help="Show what would be imported without making changes")
+    p_import.set_defaults(func=_cmd_import)
 
     return parser
 
