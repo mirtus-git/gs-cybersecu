@@ -106,7 +106,7 @@ gscs gui
 
 # Générer un script depuis un template
 gscs template list
-gscs template use recon/nmap-quick -o /opt/scripts/nmap_quick.sh --register
+gscs template use recon/nmap -o /opt/scripts/nmap_quick.sh --register
 
 # Exporter / importer la bibliothèque
 gscs export -o ma_librairie.json
@@ -176,33 +176,69 @@ gscs import <archive>          Importe depuis une archive JSON
 Les templates sont des scripts prêts à l'emploi, personnalisables, couvrant les phases classiques d'un pentest.
 
 ```bash
-gscs template list              # voir tous les templates
-gscs template show recon/nmap-quick    # prévisualiser
-gscs template use recon/nmap-quick -o scan.sh --register  # générer + enregistrer
+gscs template list                       # voir tous les templates
+gscs template show recon/nmap            # prévisualiser
+gscs template use recon/nmap -o /opt/scripts/nmap_recon.sh --register
 ```
 
-### `recon/nmap-quick` — Scan TCP rapide avec Nmap
-**Langage :** bash | **Dépendance :** `nmap`
+### `recon/nmap` — Reconnaissance Nmap multi-phases (niveau professionnel)
+**Langage :** bash | **Dépendance :** `nmap >= 7.80` | **Optionnel :** `xsltproc`, `root`
 
-Lance un scan TCP complet avec détection de services (`-sV`), scripts par défaut (`-sC`) et sauvegarde le résultat dans un fichier `.txt`.
+Script de reconnaissance complet en **6 phases indépendantes**. Chaque phase sauvegarde ses résultats en formats `.nmap`, `.gnmap`, `.xml` et `.html` (si `xsltproc` est disponible). Conçu pour être utilisé directement en mission de pentest ou audit réseau.
+
+**Phases :**
+
+| Phase | Contenu | Root requis |
+|---|---|---|
+| 1 | Host discovery (ping sweep) | non |
+| 2 | TCP port scan (profondeur selon `--mode`) | non (Connect) / oui (SYN) |
+| 3 | Service & version detection (`-sV --version-intensity 7`) | non |
+| 4 | NSE scripts (`default,banner` ; `+vuln` en mode `vuln`) | non |
+| 5 | OS fingerprinting (`-O --osscan-guess`) | **oui** (`--os`) |
+| 6 | UDP top-200 scan | **oui** (`--udp`) |
+
+**5 modes de scan :**
+
+| Mode | Ports | Timing | Scripts | Durée estimée |
+|---|---|---|---|---|
+| `quick` | top 1000 | T4 | aucun | ~1 min |
+| `standard` | top 5000 | T4 | default+banner | ~5 min |
+| `full` | 65535 | T4 | default+banner | ~20 min |
+| `stealth` | top 5000 | T2 | aucun + `-f` + random | ~15 min |
+| `vuln` | top 5000 | T4 | default+banner+vuln | ~30 min |
+
+**Exemples :**
 
 ```bash
-./nmap_quick.sh 192.168.1.0/24
-# → nmap -sV -sC -T4 --open -oN nmap_192.168.1.0_24.txt 192.168.1.0/24
+# Scan standard sur une cible unique
+./nmap_recon.sh 192.168.1.1
+
+# Scan complet avec OS et UDP (root requis)
+sudo ./nmap_recon.sh -m full --os --udp 192.168.1.1
+
+# Scan furtif sur un sous-réseau complet
+sudo ./nmap_recon.sh -m stealth -T2 --no-ping 10.10.10.0/24
+
+# Audit vulnérabilités avec rapport dans un dossier dédié
+./nmap_recon.sh -m vuln -o /tmp/audit_client 10.0.0.0/24
+
+# Ports personnalisés avec scripts ciblés
+./nmap_recon.sh -p 80,443,8080-8090 --scripts "http-title,ssl-cert" 192.168.0.1
+
+# Voir les commandes sans les exécuter (dry-run)
+./nmap_recon.sh -m full --os --udp --dry-run 10.10.14.5
 ```
 
----
+**Arborescence des fichiers produits :**
 
-### `recon/subdomain-enum` — Énumération de sous-domaines par DNS
-**Langage :** python | **Dépendance :** aucune (stdlib uniquement)
-
-Résout en parallèle (50 threads) les sous-domaines d'un domaine cible à partir d'une wordlist. Affiche chaque sous-domaine trouvé avec son IP.
-
-```bash
-python3 subdomain_enum.py exemple.com /usr/share/wordlists/subdomains.txt
-# [+] www.exemple.com           93.184.216.34
-# [+] mail.exemple.com          93.184.216.99
-# [*] Found 2 subdomains for exemple.com
+```
+recon_192.168.1.1_20260323_142500/
+├── p1_discovery.{nmap,gnmap,xml,html,log}
+├── p2_portscan.{nmap,gnmap,xml,html,log}
+├── p3_services.{nmap,gnmap,xml,html,log}
+├── p4_scripts.{nmap,gnmap,xml,html,log}
+├── p5_os.{nmap,gnmap,xml,html,log}      (si --os)
+└── p6_udp.{nmap,gnmap,xml,html,log}     (si --udp)
 ```
 
 ---
