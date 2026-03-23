@@ -88,60 +88,6 @@ if __name__ == "__main__":
 """,
     },
 
-    "recon/port-banner": {
-        "description": "Grab banners from open ports (stdlib only)",
-        "category": "recon",
-        "language": "python",
-        "tags": ["banner", "port-scan", "recon"],
-        "deps": [],
-        "content": """\
-#!/usr/bin/env python3
-# Template: recon/port-banner
-# Usage: python3 port_banner.py <host> [port1,port2,...]
-import socket
-import sys
-
-
-COMMON_PORTS = [21, 22, 23, 25, 80, 110, 143, 443, 3306, 5432, 6379, 8080, 8443]
-
-
-def grab_banner(host: str, port: int, timeout: float = 2.0) -> str | None:
-    try:
-        with socket.create_connection((host, port), timeout=timeout) as s:
-            s.settimeout(timeout)
-            try:
-                data = s.recv(1024)
-                return data.decode(errors="replace").strip()
-            except socket.timeout:
-                return "(no banner)"
-    except (ConnectionRefusedError, socket.timeout, OSError):
-        return None
-
-
-def main() -> int:
-    if len(sys.argv) < 2:
-        print(f"Usage: {sys.argv[0]} <host> [port1,port2,...]")
-        return 1
-    host = sys.argv[1]
-    ports = (
-        [int(p) for p in sys.argv[2].split(",")]
-        if len(sys.argv) > 2
-        else COMMON_PORTS
-    )
-
-    print(f"[*] Banner grabbing {host} on {len(ports)} ports\\n")
-    for port in ports:
-        banner = grab_banner(host, port)
-        if banner is not None:
-            print(f"  {port:5d}/tcp  {banner[:80]}")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
-""",
-    },
-
     "exploit/revshell-python": {
         "description": "Python reverse shell skeleton (authorized testing only)",
         "category": "exploit",
