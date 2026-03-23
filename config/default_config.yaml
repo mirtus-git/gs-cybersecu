@@ -1,0 +1,76 @@
+# GS-CYBERsecu - Default Configuration
+# This file is copied to ~/.config/gscs/config.yaml on first run.
+# Edit that copy to customize your setup.
+
+# --- Storage ---
+storage:
+  # Path to the scripts library (default: ~/.local/share/gscs/scripts)
+  scripts_dir: "~/.local/share/gscs/scripts"
+  # Path to the SQLite database
+  db_path: "~/.local/share/gscs/gscs.db"
+  # Path to execution logs directory
+  logs_dir: "~/.local/share/gscs/logs"
+  # Number of days to retain execution logs (0 = keep forever)
+  log_retention_days: 90
+
+# --- Execution ---
+execution:
+  # Sandbox backend: firejail | docker | none
+  # 'auto' detects available backends (firejail > docker > none)
+  sandbox: "auto"
+  # Default execution timeout in seconds
+  timeout: 300
+  # Require --force flag when running without sandbox
+  require_force_no_sandbox: true
+  # Docker image per language (used when sandbox=docker)
+  docker_images:
+    python: "python:3.12-slim"
+    bash: "debian:bookworm-slim"
+    go: "golang:1.22-bookworm"
+    ruby: "ruby:3.3-slim"
+    other: "debian:bookworm-slim"
+
+# --- Firejail profiles ---
+firejail:
+  # Base options applied to all executions
+  base_opts:
+    - "--noprofile"
+    - "--noroot"
+    - "--net=none"
+    - "--nosound"
+    - "--no3d"
+  # Per-category profile overrides
+  category_opts:
+    recon:
+      - "--net=none"  # recon scripts should NOT need network by default
+    exploit: []
+    post-exploit: []
+    forensic:
+      - "--read-only=/"  # forensic scripts should be read-only
+
+# --- UI ---
+ui:
+  # Default output format: table | json | minimal
+  format: "table"
+  # Show script SHA256 integrity check result in list
+  show_integrity: false
+  # Number of items per page in list commands
+  page_size: 20
+  # Color theme: dark | light | none
+  theme: "dark"
+
+# --- Categories ---
+# You can add custom categories here
+categories:
+  - recon
+  - exploit
+  - post-exploit
+  - forensic
+  - custom
+
+# --- Dependencies ---
+deps:
+  # Automatically suggest missing dependencies
+  auto_suggest: true
+  # Fail hard on missing required deps (vs just warn)
+  fail_on_missing: true

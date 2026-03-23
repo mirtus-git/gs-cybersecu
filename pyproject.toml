@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gs-cybersecu"
+version = "0.1.0"
+description = "Gestionnaire de scripts pour la cybersécurité et le pentest sous Linux"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+keywords = ["cybersecurity", "pentest", "scripts", "manager", "security"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+]
+# NO required dependencies - pure stdlib
+dependencies = []
+
+[project.optional-dependencies]
+rich = ["rich>=13.0"]        # Pretty terminal output
+yaml = ["pyyaml>=6.0"]      # YAML config support (JSON used by default)
+all = ["rich>=13.0", "pyyaml>=6.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+gscs = "gscs.main:main"
+
+[project.urls]
+Homepage = "https://github.com/mirtus-git/gs-cybersecu"
+Issues = "https://github.com/mirtus-git/gs-cybersecu/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gscs"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src/gscs"]
